@@ -139,7 +139,7 @@
       position: fixed;
       top: 32px;
       left: 28px;
-      z-index: 11;
+      z-index: 14;
       border: 1px solid rgba(255, 255, 255, 0.75);
       background: rgba(255, 255, 255, 0.12);
       color: #fff;
@@ -160,6 +160,162 @@
       pointer-events: auto;
     }
 
+    #phone-ui {
+      position: fixed;
+      inset: 0;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms linear;
+    }
+
+    #phone-ui.visible {
+      pointer-events: none;
+    }
+
+    #phone-ui.visible .phone-arrow,
+    #phone-ui.visible #phone-photo-wrap {
+      pointer-events: auto;
+    }
+
+    #phone-photo-wrap {
+      position: relative;
+      width: min(92vw, 420px);
+      height: min(78vh, 740px);
+      border-radius: 28px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+    }
+
+    #phone-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 120ms ease;
+    }
+
+    #phone-photo.fading {
+      opacity: 0.4;
+    }
+
+    .phone-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0 2px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .phone-arrow:hover {
+      background: rgba(0, 0, 0, 0.65);
+    }
+
+    #phone-prev { left: max(12px, calc(50% - min(46vw, 210px) - 56px)); }
+    #phone-next { right: max(12px, calc(50% - min(46vw, 210px) - 56px)); }
+
+    #phone-notifications {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 13;
+      pointer-events: none;
+      padding: 12px 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .imessage-notif {
+      margin: 0 auto;
+      width: min(360px, calc(100vw - 24px));
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-radius: 16px;
+      padding: 11px 14px 12px;
+      box-shadow: 0 6px 28px rgba(0, 0, 0, 0.22);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: notif-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .imessage-notif.leaving {
+      animation: notif-out 0.35s ease forwards;
+    }
+
+    .imessage-notif .icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #34c759, #30d158);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .imessage-notif .body {
+      flex: 1;
+      min-width: 0;
+      font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    }
+
+    .imessage-notif .sender {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1c1c1e;
+      margin-bottom: 2px;
+    }
+
+    .imessage-notif .msg {
+      font-size: 14px;
+      color: #3a3a3c;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .imessage-notif .time {
+      font-size: 12px;
+      color: #8e8e93;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    @keyframes notif-in {
+      from { opacity: 0; transform: translateY(-110%); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes notif-out {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to   { opacity: 0; transform: translateY(-20px) scale(0.96); }
+    }
+
   </style>
 </head>
 <body>
@@ -174,6 +330,14 @@
 <button id="squeeze-btn" type="button">SQUEEZE</button>
 <button id="check-phone-btn" type="button">CHECK HER PHONE</button>
 <div id="phone-fade"></div>
+<div id="phone-ui">
+  <button id="phone-prev" class="phone-arrow" type="button" aria-label="Previous photo">‹</button>
+  <div id="phone-photo-wrap">
+    <img id="phone-photo" alt="" />
+  </div>
+  <button id="phone-next" class="phone-arrow" type="button" aria-label="Next photo">›</button>
+</div>
+<div id="phone-notifications"></div>
 <button id="phone-back-btn" type="button">BACK</button>
 
 
@@ -282,6 +446,30 @@ const phoneViewState = {
   blend: 0,
   target: 0,
 };
+
+const phonePhotos = [
+  'phonephotos/1.jpg',
+  'phonephotos/2.png',
+  'phonephotos/3.jpeg',
+  'phonephotos/4.jpeg',
+  'phonephotos/5.png',
+  'phonephotos/6.png',
+  'phonephotos/7.png',
+];
+let phonePhotoIndex = 0;
+let notifTimer = null;
+let notifActive = false;
+
+const flirtyContacts = [
+  { name: 'Mia 💕', msgs: ['miss u baby come over tonight', 'u looked so good last night 😍', 'when can i see u again??'] },
+  { name: 'Ashley ❤️', msgs: ['thinking about you...', 'wyd rn handsome', 'save me a spot in ur bed lol'] },
+  { name: 'Jessica 💗', msgs: ['cant stop smiling bc of u', 'come thru after work??', 'u owe me a kiss 😘'] },
+  { name: 'Taylor 💋', msgs: ['still dreaming about saturday', 'text me when ur alone', 'i saved ur hoodie btw'] },
+  { name: 'Brianna 🩷', msgs: ['hey stranger 😉', 'u free this weekend?', 'my place or urs babe'] },
+  { name: 'Chloe 💞', msgs: ['just saw ur story omg', 'come keep me company', 'miss ur face already'] },
+  { name: 'Destiny 💘', msgs: ['u up??', 'been waiting for u to text back', 'dont leave me on read lol'] },
+  { name: 'Hailey ❤️‍🔥', msgs: ['ur literally so fine', 'pick me up tonight?', 'i have a surprise for u'] },
+];
 
 textureLoader.load('dollface.png', (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -474,6 +662,11 @@ const squeezeBtn = document.getElementById('squeeze-btn');
 const checkPhoneBtn = document.getElementById('check-phone-btn');
 const phoneFade = document.getElementById('phone-fade');
 const phoneBackBtn = document.getElementById('phone-back-btn');
+const phoneUi = document.getElementById('phone-ui');
+const phonePhotoEl = document.getElementById('phone-photo');
+const phoneNotifContainer = document.getElementById('phone-notifications');
+const phonePrevBtn = document.getElementById('phone-prev');
+const phoneNextBtn = document.getElementById('phone-next');
 const fadeDistance = 500;
 const endTriggerThreshold = 0.92;
 const squeezeSoundFiles = [
@@ -516,12 +709,101 @@ squeezeBtn.addEventListener('click', () => {
   playVoice(clip);
   squeezeIndex = (squeezeIndex + 1) % squeezeSoundFiles.length;
 });
+function updatePhonePhoto() {
+  phonePhotoEl.src = phonePhotos[phonePhotoIndex];
+}
+
+function showPhonePhoto(dir) {
+  phonePhotoIndex = (phonePhotoIndex + dir + phonePhotos.length) % phonePhotos.length;
+  phonePhotoEl.classList.add('fading');
+  setTimeout(() => {
+    updatePhonePhoto();
+    phonePhotoEl.classList.remove('fading');
+  }, 80);
+}
+
+function randomNotifTime() {
+  return 3000 + Math.random() * 2000;
+}
+
+function spawnNotification() {
+  const contact = flirtyContacts[Math.floor(Math.random() * flirtyContacts.length)];
+  const msg = contact.msgs[Math.floor(Math.random() * contact.msgs.length)];
+  const el = document.createElement('div');
+  el.className = 'imessage-notif';
+  el.innerHTML = `
+    <div class="icon">💬</div>
+    <div class="body">
+      <div class="sender">${contact.name}</div>
+      <div class="msg">${msg}</div>
+    </div>
+    <div class="time">now</div>
+  `;
+  phoneNotifContainer.prepend(el);
+
+  const existing = phoneNotifContainer.querySelectorAll('.imessage-notif');
+  if (existing.length > 3) {
+    const oldest = existing[existing.length - 1];
+    oldest.classList.add('leaving');
+    setTimeout(() => oldest.remove(), 350);
+  }
+
+  setTimeout(() => {
+    if (!el.parentNode) return;
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 350);
+  }, 4200);
+}
+
+function scheduleNotification() {
+  clearTimeout(notifTimer);
+  if (!notifActive) return;
+  notifTimer = setTimeout(() => {
+    if (notifActive) {
+      spawnNotification();
+      scheduleNotification();
+    }
+  }, randomNotifTime());
+}
+
+function startPhoneNotifications() {
+  if (notifActive) return;
+  notifActive = true;
+  spawnNotification();
+  scheduleNotification();
+}
+
+function stopPhoneNotifications() {
+  notifActive = false;
+  clearTimeout(notifTimer);
+  notifTimer = null;
+  phoneNotifContainer.innerHTML = '';
+}
+
+function setPhoneViewActive(active) {
+  if (active) {
+    updatePhonePhoto();
+    startPhoneNotifications();
+  } else {
+    stopPhoneNotifications();
+  }
+}
+
 checkPhoneBtn.addEventListener('click', () => {
   phoneViewState.target = 1;
 });
 phoneBackBtn.addEventListener('click', () => {
   phoneViewState.target = 0;
 });
+phonePrevBtn.addEventListener('click', () => showPhonePhoto(-1));
+phoneNextBtn.addEventListener('click', () => showPhonePhoto(1));
+window.addEventListener('keydown', (e) => {
+  if (phoneViewState.blend < 0.5) return;
+  if (e.key === 'ArrowLeft') showPhonePhoto(-1);
+  if (e.key === 'ArrowRight') showPhonePhoto(1);
+});
+
+updatePhonePhoto();
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
@@ -627,6 +909,16 @@ function animate() {
   checkPhoneBtn.style.pointerEvents = phoneBtnAlpha > 0.98 ? 'auto' : 'none';
   phoneBackBtn.classList.toggle('visible', phoneViewState.blend > 0.22);
   phoneFade.style.opacity = String(Math.min(1, Math.max(0, phoneViewState.blend * 1.08)));
+
+  const phoneUiAlpha = clamp01((phoneViewState.blend - 0.35) / 0.45);
+  phoneUi.style.opacity = String(phoneUiAlpha);
+  phoneUi.classList.toggle('visible', phoneUiAlpha > 0.5);
+
+  if (phoneViewState.target === 1 && phoneViewState.blend > 0.75 && !notifActive) {
+    setPhoneViewActive(true);
+  } else if (phoneViewState.target === 0 && notifActive) {
+    setPhoneViewActive(false);
+  }
 
   if (phoneMesh) {
     phoneMesh.material.opacity = endRevealState.value;
