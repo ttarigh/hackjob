@@ -102,13 +102,7 @@
       cursor: pointer;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 180ms linear, transform 180ms ease;
-    }
-
-    #squeeze-btn.visible {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
+      transition: none;
     }
 
     #check-phone-btn {
@@ -127,13 +121,8 @@
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, -100%);
-      transition: opacity 180ms linear;
+      transition: none;
       white-space: nowrap;
-    }
-
-    #check-phone-btn.visible {
-      opacity: 1;
-      pointer-events: auto;
     }
 
     #phone-fade {
@@ -499,16 +488,26 @@ let squeezeIndex = 0;
 let currentVoiceAudio = null;
 let talkPhase = 0;
 let mouthOpenAmount = 0;
+const endRevealState = {
+  target: 0,
+  value: 0,
+};
 
-function playVoice(path) {
+function playVoice(path, onEnded) {
   if (currentVoiceAudio) {
     currentVoiceAudio.pause();
     currentVoiceAudio.currentTime = 0;
   }
-  currentVoiceAudio = new Audio(path);
-  currentVoiceAudio.preload = 'auto';
-  currentVoiceAudio.currentTime = 0;
-  currentVoiceAudio.play().catch(() => {});
+  const audio = new Audio(path);
+  currentVoiceAudio = audio;
+  audio.preload = 'auto';
+  audio.currentTime = 0;
+  if (typeof onEnded === 'function') {
+    audio.addEventListener('ended', () => {
+      if (currentVoiceAudio === audio) onEnded();
+    }, { once: true });
+  }
+  audio.play().catch(() => {});
   talkPhase = 0;
 }
 
@@ -550,10 +549,16 @@ function animate() {
   const atEnd = raw >= endTriggerThreshold;
 
   if (atEnd && !reachedEnd) {
-    playVoice('nastysayings/1.wav');
+    endRevealState.target = 0;
+    playVoice('nastysayings/1.wav', () => {
+      if (raw >= endTriggerThreshold) {
+        endRevealState.target = 1;
+      }
+    });
     reachedEnd = true;
   } else if (!atEnd) {
     reachedEnd = false;
+    endRevealState.target = 0;
   }
 
   if (model) {
@@ -582,6 +587,8 @@ function animate() {
   const smooth = 1 - Math.exp(-dt * 18);
   mouthOpenAmount = THREE.MathUtils.lerp(mouthOpenAmount, targetMouthOpen, smooth);
   setMouthOpen(mouthOpenAmount);
+  const revealSmooth = 1 - Math.exp(-dt * 6.5);
+  endRevealState.value = THREE.MathUtils.lerp(endRevealState.value, endRevealState.target, revealSmooth);
   const viewBlendSmooth = 1 - Math.exp(-dt * phoneViewParams.blendSpeed);
   phoneViewState.blend = THREE.MathUtils.lerp(phoneViewState.blend, phoneViewState.target, viewBlendSmooth);
 
@@ -609,12 +616,20 @@ function animate() {
   }
 
   overlayText.style.opacity = String(introOpacity);
-  squeezeBtn.classList.toggle('visible', atEnd && phoneViewState.blend < 0.05);
-  checkPhoneBtn.classList.toggle('visible', atEnd && !!phoneMesh && phoneViewState.blend < 0.22);
+  const revealAlpha = atEnd ? endRevealState.value : 0;
+  const squeezeVisibility = phoneViewState.blend < 0.05 ? 1 : 0;
+  const phoneBtnVisibility = (phoneViewState.blend < 0.22 && phoneMesh) ? 1 : 0;
+  const squeezeAlpha = revealAlpha * squeezeVisibility;
+  const phoneBtnAlpha = revealAlpha * phoneBtnVisibility;
+  squeezeBtn.style.opacity = String(squeezeAlpha);
+  checkPhoneBtn.style.opacity = String(phoneBtnAlpha);
+  squeezeBtn.style.pointerEvents = squeezeAlpha > 0.98 ? 'auto' : 'none';
+  checkPhoneBtn.style.pointerEvents = phoneBtnAlpha > 0.98 ? 'auto' : 'none';
   phoneBackBtn.classList.toggle('visible', phoneViewState.blend > 0.22);
   phoneFade.style.opacity = String(Math.min(1, Math.max(0, phoneViewState.blend * 1.08)));
 
   if (phoneMesh) {
+    phoneMesh.material.opacity = endRevealState.value;
     phoneMesh.updateWorldMatrix(true, false);
     phoneButtonAnchor.set(0, phoneBaseHeight * 0.55, 0);
     phoneMesh.localToWorld(phoneButtonAnchor);
