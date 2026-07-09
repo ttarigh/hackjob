@@ -111,6 +111,31 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    #check-phone-btn {
+      position: fixed;
+      z-index: 9;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+      transition: opacity 180ms linear;
+      white-space: nowrap;
+    }
+
+    #check-phone-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
   </style>
 </head>
 <body>
@@ -123,6 +148,7 @@
   <div id="scroll-cue">SCROLL <span class="arrow">↓</span></div>
 </div>
 <button id="squeeze-btn" type="button">SQUEEZE</button>
+<button id="check-phone-btn" type="button">CHECK HER PHONE</button>
 
 
 <script async src="https://unpkg.com/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
@@ -183,6 +209,7 @@ let faceTexture = null;
 let faceGroup = null;
 let faceTopMesh = null;
 let faceBottomMesh = null;
+let phoneMesh = null;
 let baseTopY = 0;
 let baseBottomY = 0;
 const faceParams = {
@@ -199,6 +226,22 @@ const talkParams = {
   speed: 23.7,
   rotateDeg: 0,
 };
+const phoneParams = {
+  x: -1.61,
+  y: 3.21,
+  z: 0.85,
+  rotX: 34,
+  rotY: 38.4,
+  rotZ: -10.3,
+  scale: 1.13,
+  buttonOffsetX: -18,
+  buttonOffsetY: 9,
+};
+const phoneButtonAnchor = new THREE.Vector3();
+const phoneCanvasSize = { width: 1125, height: 2436 };
+const phoneAspect = phoneCanvasSize.width / phoneCanvasSize.height;
+const phoneBaseHeight = 1.2;
+const phoneBaseWidth = phoneBaseHeight * phoneAspect;
 
 textureLoader.load('dollface.png', (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -256,8 +299,40 @@ function setupModel(obj) {
   obj.rotation.y = Math.PI;
 
   addFaceOverlay(obj);
+  addPhoneOverlay(obj);
   model = obj;
   scene.add(model);
+}
+
+function addPhoneOverlay(root) {
+  const tex = textureLoader.load('iphone.png', () => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+  });
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    alphaTest: 0.02,
+    side: THREE.FrontSide,
+    depthWrite: false,
+  });
+  const geo = new THREE.PlaneGeometry(phoneBaseWidth, phoneBaseHeight);
+  phoneMesh = new THREE.Mesh(geo, mat);
+  root.add(phoneMesh);
+  applyPhoneTransform();
+}
+
+function applyPhoneTransform() {
+  if (!phoneMesh) return;
+  phoneMesh.position.set(phoneParams.x, phoneParams.y, phoneParams.z);
+  phoneMesh.rotation.set(
+    THREE.MathUtils.degToRad(phoneParams.rotX),
+    THREE.MathUtils.degToRad(phoneParams.rotY),
+    THREE.MathUtils.degToRad(phoneParams.rotZ)
+  );
+  phoneMesh.scale.setScalar(phoneParams.scale);
 }
 
 function addFaceOverlay(root) {
@@ -356,6 +431,7 @@ let scrollY = 0;
 window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
 const overlayText = document.getElementById('overlay-text');
 const squeezeBtn = document.getElementById('squeeze-btn');
+const checkPhoneBtn = document.getElementById('check-phone-btn');
 const fadeDistance = 500;
 const endTriggerThreshold = 0.92;
 const squeezeSoundFiles = [
@@ -387,6 +463,9 @@ squeezeBtn.addEventListener('click', () => {
   const clip = squeezeSoundFiles[squeezeIndex];
   playVoice(clip);
   squeezeIndex = (squeezeIndex + 1) % squeezeSoundFiles.length;
+});
+checkPhoneBtn.addEventListener('click', () => {
+  playVoice('nastysayings/1.wav');
 });
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
@@ -457,6 +536,18 @@ function animate() {
   camera.lookAt(0, lookY, 0);
   overlayText.style.opacity = String(introOpacity);
   squeezeBtn.classList.toggle('visible', atEnd);
+  checkPhoneBtn.classList.toggle('visible', atEnd && !!phoneMesh);
+
+  if (phoneMesh) {
+    phoneMesh.updateWorldMatrix(true, false);
+    phoneButtonAnchor.set(0, phoneBaseHeight * 0.55, 0);
+    phoneMesh.localToWorld(phoneButtonAnchor);
+    phoneButtonAnchor.project(camera);
+    const sx = (phoneButtonAnchor.x * 0.5 + 0.5) * canvas.clientWidth;
+    const sy = (-phoneButtonAnchor.y * 0.5 + 0.5) * canvas.clientHeight;
+    checkPhoneBtn.style.left = `${sx + phoneParams.buttonOffsetX}px`;
+    checkPhoneBtn.style.top = `${sy - phoneParams.buttonOffsetY}px`;
+  }
 
   renderer.render(scene, camera);
 
