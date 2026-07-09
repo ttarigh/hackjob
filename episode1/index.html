@@ -84,6 +84,63 @@
       50% { opacity: 0.6; }
     }
 
+    #face-gui {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 12;
+      width: 280px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(8, 18, 78, 0.84);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+
+    #face-gui h2 {
+      margin: 0 0 10px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .face-row { margin-bottom: 8px; }
+    .face-row label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      opacity: 0.92;
+      font-size: 11px;
+    }
+    .face-row input[type="range"] { width: 100%; }
+
+    .face-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .face-actions button {
+      flex: 1;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      padding: 7px 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .face-actions button:hover { background: rgba(255, 255, 255, 0.2); }
+
+    #face-gui-status {
+      margin-top: 8px;
+      min-height: 14px;
+      font-size: 10px;
+      opacity: 0.85;
+    }
+
   </style>
 </head>
 <body>
@@ -94,6 +151,15 @@
   <div id="top-line">HELLO SUSANNAH</div>
   <div id="bottom-line">I AM YOUR SOLUTION</div>
   <div id="scroll-cue">SCROLL <span class="arrow">↓</span></div>
+</div>
+<div id="face-gui">
+  <h2>Face Overlay GUI</h2>
+  <div id="face-controls"></div>
+  <div class="face-actions">
+    <button id="face-copy-btn" type="button">Copy Face JSON</button>
+    <button id="face-paste-btn" type="button">Paste Face JSON</button>
+  </div>
+  <div id="face-gui-status"></div>
 </div>
 
 
@@ -119,6 +185,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+const textureLoader = new THREE.TextureLoader();
 
 // Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
@@ -150,6 +217,23 @@ applyBg(params.bgColor);
 
 // ─── Model ─────────────────────────────────────────────────────
 let model = null;
+let faceTexture = null;
+let facePlane = null;
+const faceParams = {
+  x: 0.1,
+  y: 4.71,
+  z: 1.05,
+  width: 3.68,
+  height: 5.12,
+  rotY: 0,
+};
+
+textureLoader.load('dollface.png', (tex) => {
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  faceTexture = tex;
+});
 
 const mtlLoader = new MTLLoader();
 mtlLoader.setPath('doll_object/');
@@ -199,8 +283,43 @@ function setupModel(obj) {
   // Start facing AWAY from camera (back of head toward viewer)
   obj.rotation.y = Math.PI;
 
+  addFaceOverlay(obj);
   model = obj;
   scene.add(model);
+}
+
+function addFaceOverlay(root) {
+  if (!faceTexture) {
+    textureLoader.load('dollface.png', (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      faceTexture = tex;
+      addFaceOverlay(root);
+    });
+    return;
+  }
+
+  const faceMaterial = new THREE.MeshBasicMaterial({
+    map: faceTexture,
+    transparent: true,
+    alphaTest: 0.02,
+    side: THREE.FrontSide,
+    depthWrite: false,
+  });
+
+  // Flat face card placed at the front of the head.
+  facePlane = new THREE.Mesh(new THREE.PlaneGeometry(faceParams.width, faceParams.height), faceMaterial);
+  applyFaceTransform();
+  root.add(facePlane);
+}
+
+function applyFaceTransform() {
+  if (!facePlane) return;
+  facePlane.position.set(faceParams.x, faceParams.y, faceParams.z);
+  facePlane.rotation.y = THREE.MathUtils.degToRad(faceParams.rotY);
+  facePlane.geometry.dispose();
+  facePlane.geometry = new THREE.PlaneGeometry(faceParams.width, faceParams.height);
 }
 
 // ─── Scroll ────────────────────────────────────────────────────
@@ -208,6 +327,86 @@ let scrollY = 0;
 window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
 const overlayText = document.getElementById('overlay-text');
 const fadeDistance = 500;
+const faceControls = document.getElementById('face-controls');
+const faceStatus = document.getElementById('face-gui-status');
+const faceSliderBindings = [];
+
+function setFaceStatus(msg) {
+  faceStatus.textContent = msg;
+  window.setTimeout(() => {
+    if (faceStatus.textContent === msg) faceStatus.textContent = '';
+  }, 1800);
+}
+
+function addFaceSlider(key, label, min, max, step = 0.01) {
+  const row = document.createElement('div');
+  row.className = 'face-row';
+  const labelEl = document.createElement('label');
+  const left = document.createElement('span');
+  left.textContent = label;
+  const right = document.createElement('span');
+  right.textContent = String(faceParams[key]);
+  labelEl.append(left, right);
+
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(faceParams[key]);
+  input.addEventListener('input', () => {
+    faceParams[key] = Number(input.value);
+    right.textContent = String(faceParams[key]);
+    applyFaceTransform();
+  });
+
+  row.append(labelEl, input);
+  faceControls.appendChild(row);
+  faceSliderBindings.push({ key, input, valueEl: right });
+}
+
+addFaceSlider('x', 'X', -10, 10, 0.01);
+addFaceSlider('y', 'Y', -20, 20, 0.01);
+addFaceSlider('z', 'Z', -10, 10, 0.01);
+addFaceSlider('width', 'Width', 0.1, 20, 0.01);
+addFaceSlider('height', 'Height', 0.1, 20, 0.01);
+addFaceSlider('rotY', 'Y Rotation (deg)', -180, 180, 1);
+
+document.getElementById('face-copy-btn').addEventListener('click', async () => {
+  const json = JSON.stringify(faceParams, null, 2);
+  try {
+    await navigator.clipboard.writeText(json);
+    setFaceStatus('Copied face settings');
+  } catch {
+    window.prompt('Copy face settings:', json);
+  }
+});
+
+document.getElementById('face-paste-btn').addEventListener('click', async () => {
+  let raw = '';
+  try {
+    raw = await navigator.clipboard.readText();
+  } catch {
+    raw = window.prompt('Paste face JSON:') || '';
+  }
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    Object.keys(faceParams).forEach((k) => {
+      if (typeof parsed[k] === 'number' && Number.isFinite(parsed[k])) {
+        faceParams[k] = parsed[k];
+      }
+    });
+    faceSliderBindings.forEach(({ key, input, valueEl }) => {
+      input.value = String(faceParams[key]);
+      valueEl.textContent = String(faceParams[key]);
+    });
+    applyFaceTransform();
+    setFaceStatus('Pasted face settings');
+  } catch {
+    setFaceStatus('Invalid JSON');
+  }
+});
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
