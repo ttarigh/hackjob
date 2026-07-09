@@ -4,23 +4,188 @@
   <meta charset="UTF-8">
   <title>Episode 1</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      background: pink;
-      color: #fff;
-      font-family: sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+      background: #004cff;
+      overflow-x: hidden;
     }
-    h1 {
-      font-size: 3rem;
-      text-shadow: 1px 1px 4px #c2185b;
+
+    #scroll-track {
+      height: 400vh;
+      position: relative;
     }
+
+    #canvas-wrapper {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
   </style>
 </head>
 <body>
-  <h1>Episode 1</h1>
+
+<div id="scroll-track"></div>
+<div id="canvas-wrapper"><canvas id="c"></canvas></div>
+
+
+<script async src="https://unpkg.com/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+
+// ─── Renderer + Scene ──────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(3, 6, 8);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x99aaff, 0.6);
+rim.position.set(-4, 2, -5);
+scene.add(rim);
+
+// ─── Live Params ───────────────────────────────────────────────
+const params = {
+  bgColor:     '#004cff',
+  scrollStart: 0,
+  scrollEnd:   2134,
+  startZ:      24,
+  endZ:        3.5,
+  faceY:       1.2,
+  modelY:      -1.85,
+};
+
+function applyBg(hex) {
+  const col = new THREE.Color(hex);
+  renderer.setClearColor(col, 1);
+  scene.background = col;
+  document.body.style.background = hex;
+}
+applyBg(params.bgColor);
+
+// ─── Model ─────────────────────────────────────────────────────
+let model = null;
+
+const mtlLoader = new MTLLoader();
+mtlLoader.setPath('doll_object/');
+mtlLoader.load(
+  'AnimeChibiModelBase.mtl',
+  (mats) => {
+    mats.preload();
+    const obj = new OBJLoader();
+    obj.setMaterials(mats);
+    obj.load('doll_object/AnimeChibiModelBase.obj', setupModel, null, loadFallback);
+  },
+  null,
+  loadFallback
+);
+
+function loadFallback() {
+  new OBJLoader().load('doll_object/AnimeChibiModelBase.obj', (obj) => {
+    obj.traverse(child => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshPhongMaterial({
+          color: 0xddccff, specular: 0x8888ff, shininess: 60,
+        });
+      }
+    });
+    setupModel(obj);
+  });
+}
+
+function setupModel(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = box.getCenter(new THREE.Vector3());
+  const size   = box.getSize(new THREE.Vector3());
+  const scale  = 4 / Math.max(size.x, size.y, size.z);
+
+  // Recentre geometry pivot at model base-centre
+  obj.position.copy(center.clone().negate().multiplyScalar(scale));
+  obj.scale.setScalar(scale);
+
+  // Start facing AWAY from camera (back of head toward viewer)
+  obj.rotation.y = Math.PI;
+
+  model = obj;
+  scene.add(model);
+}
+
+// ─── Scroll ────────────────────────────────────────────────────
+let scrollY = 0;
+window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+function easeOut(t) {
+  // Cubic ease-out: starts immediately fast, decelerates to a smooth stop
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ─── Render Loop ───────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  resizeIfNeeded();
+
+  const raw = clamp01((scrollY - params.scrollStart) /
+                      Math.max(1, params.scrollEnd - params.scrollStart));
+  const t = easeOut(raw);
+
+  if (model) {
+    // Rotate from π (back) → 0 (front), purely scroll-driven
+    model.rotation.y = Math.PI * (1 - t);
+    // Vertical offset so user can nudge doll up/down
+    model.position.y = params.modelY;
+  }
+
+  // Camera: pull in from startZ → endZ, and rise up toward face
+  camera.position.z = lerp(params.startZ, params.endZ, t);
+  camera.position.y = lerp(0, params.faceY * 0.35, t); // camera lifts slightly
+
+  // Look toward the face: y=0 at start, y=faceY at end
+  const lookY = lerp(0, params.faceY, t);
+  camera.lookAt(0, lookY, 0);
+
+  renderer.render(scene, camera);
+
+}
+
+function resizeIfNeeded() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (renderer.domElement.width !== w || renderer.domElement.height !== h) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+
+animate();
+
+</script>
 </body>
 </html>
