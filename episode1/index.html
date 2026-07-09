@@ -136,6 +136,41 @@
       pointer-events: auto;
     }
 
+    #phone-fade {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms linear;
+    }
+
+    #phone-back-btn {
+      position: fixed;
+      top: 32px;
+      left: 28px;
+      z-index: 11;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms linear;
+    }
+
+    #phone-back-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
   </style>
 </head>
 <body>
@@ -149,6 +184,8 @@
 </div>
 <button id="squeeze-btn" type="button">SQUEEZE</button>
 <button id="check-phone-btn" type="button">CHECK HER PHONE</button>
+<div id="phone-fade"></div>
+<button id="phone-back-btn" type="button">BACK</button>
 
 
 <script async src="https://unpkg.com/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
@@ -237,11 +274,25 @@ const phoneParams = {
   buttonOffsetX: -18,
   buttonOffsetY: 9,
 };
+const phoneViewParams = {
+  targetDistance: 0.12,
+  riseOffset: 0.04,
+  blendSpeed: 5.2,
+};
 const phoneButtonAnchor = new THREE.Vector3();
+const phoneWorldPos = new THREE.Vector3();
+const phoneNormal = new THREE.Vector3();
+const phoneCameraPos = new THREE.Vector3();
+const baseLookTarget = new THREE.Vector3();
+const blendedLookTarget = new THREE.Vector3();
 const phoneCanvasSize = { width: 1125, height: 2436 };
 const phoneAspect = phoneCanvasSize.width / phoneCanvasSize.height;
 const phoneBaseHeight = 1.2;
 const phoneBaseWidth = phoneBaseHeight * phoneAspect;
+const phoneViewState = {
+  blend: 0,
+  target: 0,
+};
 
 textureLoader.load('dollface.png', (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -432,6 +483,8 @@ window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive
 const overlayText = document.getElementById('overlay-text');
 const squeezeBtn = document.getElementById('squeeze-btn');
 const checkPhoneBtn = document.getElementById('check-phone-btn');
+const phoneFade = document.getElementById('phone-fade');
+const phoneBackBtn = document.getElementById('phone-back-btn');
 const fadeDistance = 500;
 const endTriggerThreshold = 0.92;
 const squeezeSoundFiles = [
@@ -465,7 +518,10 @@ squeezeBtn.addEventListener('click', () => {
   squeezeIndex = (squeezeIndex + 1) % squeezeSoundFiles.length;
 });
 checkPhoneBtn.addEventListener('click', () => {
-  playVoice('nastysayings/1.wav');
+  phoneViewState.target = 1;
+});
+phoneBackBtn.addEventListener('click', () => {
+  phoneViewState.target = 0;
 });
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
@@ -526,17 +582,37 @@ function animate() {
   const smooth = 1 - Math.exp(-dt * 18);
   mouthOpenAmount = THREE.MathUtils.lerp(mouthOpenAmount, targetMouthOpen, smooth);
   setMouthOpen(mouthOpenAmount);
+  const viewBlendSmooth = 1 - Math.exp(-dt * phoneViewParams.blendSpeed);
+  phoneViewState.blend = THREE.MathUtils.lerp(phoneViewState.blend, phoneViewState.target, viewBlendSmooth);
 
   // Camera: pull in from startZ → endZ, and rise up toward face
-  camera.position.z = lerp(params.startZ, params.endZ, t);
-  camera.position.y = lerp(0, params.faceY * 0.35, t); // camera lifts slightly
+  const baseCameraZ = lerp(params.startZ, params.endZ, t);
+  const baseCameraY = lerp(0, params.faceY * 0.35, t); // camera lifts slightly
+  camera.position.set(0, baseCameraY, baseCameraZ);
 
   // Look toward the face: y=0 at start, y=faceY at end
   const lookY = lerp(0, params.faceY, t);
-  camera.lookAt(0, lookY, 0);
+  baseLookTarget.set(0, lookY, 0);
+
+  if (phoneMesh && phoneViewState.blend > 0.001) {
+    phoneMesh.updateWorldMatrix(true, false);
+    phoneMesh.getWorldPosition(phoneWorldPos);
+    phoneNormal.set(0, 0, 1).applyQuaternion(phoneMesh.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    phoneCameraPos.copy(phoneWorldPos)
+      .addScaledVector(phoneNormal, phoneViewParams.targetDistance)
+      .addScaledVector(camera.up, phoneViewParams.riseOffset);
+    camera.position.lerp(phoneCameraPos, phoneViewState.blend);
+    blendedLookTarget.copy(baseLookTarget).lerp(phoneWorldPos, phoneViewState.blend);
+    camera.lookAt(blendedLookTarget);
+  } else {
+    camera.lookAt(baseLookTarget);
+  }
+
   overlayText.style.opacity = String(introOpacity);
-  squeezeBtn.classList.toggle('visible', atEnd);
-  checkPhoneBtn.classList.toggle('visible', atEnd && !!phoneMesh);
+  squeezeBtn.classList.toggle('visible', atEnd && phoneViewState.blend < 0.05);
+  checkPhoneBtn.classList.toggle('visible', atEnd && !!phoneMesh && phoneViewState.blend < 0.22);
+  phoneBackBtn.classList.toggle('visible', phoneViewState.blend > 0.22);
+  phoneFade.style.opacity = String(Math.min(1, Math.max(0, phoneViewState.blend * 1.08)));
 
   if (phoneMesh) {
     phoneMesh.updateWorldMatrix(true, false);
