@@ -28,12 +28,73 @@
       height: 100% !important;
     }
 
+    #overlay-text {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      color: #ffffff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-align: center;
+      transition: opacity 120ms linear;
+    }
+
+    #top-line {
+      position: absolute;
+      left: 50%;
+      top: 30%;
+      transform: translateX(-50%);
+      font-size: 25px;
+      font-weight: 400;
+      line-height: 1.05;
+    }
+
+    #bottom-line {
+      position: absolute;
+      left: 50%;
+      bottom: 32%;
+      transform: translateX(-50%);
+      font-size: 21px;
+      font-weight: 400;
+      line-height: 1.1;
+    }
+
+    #scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 21%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      font-weight: 400;
+      opacity: 0.4;
+      animation: cue-blink 1.1s ease-in-out infinite;
+    }
+
+    #scroll-cue .arrow {
+      display: block;
+      margin-top: 2px;
+      font-size: 1.2em;
+      line-height: 1;
+    }
+
+    @keyframes cue-blink {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.6; }
+    }
+
   </style>
 </head>
 <body>
 
 <div id="scroll-track"></div>
 <div id="canvas-wrapper"><canvas id="c"></canvas></div>
+<div id="overlay-text">
+  <div id="top-line">HELLO SUSANNAH</div>
+  <div id="bottom-line">I AM YOUR SOLUTION</div>
+  <div id="scroll-cue">SCROLL <span class="arrow">↓</span></div>
+</div>
 
 
 <script async src="https://unpkg.com/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
@@ -106,18 +167,26 @@ mtlLoader.load(
 
 function loadFallback() {
   new OBJLoader().load('doll_object/AnimeChibiModelBase.obj', (obj) => {
-    obj.traverse(child => {
-      if (child.isMesh) {
-        child.material = new THREE.MeshPhongMaterial({
-          color: 0xddccff, specular: 0x8888ff, shininess: 60,
-        });
-      }
-    });
+    applyRigMaterial(obj);
     setupModel(obj);
   });
 }
 
+function applyRigMaterial(root) {
+  root.traverse((child) => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshPhongMaterial({
+        color: 0xf2c7b3,
+        specular: 0x111111,
+        shininess: 8,
+      });
+    }
+  });
+}
+
 function setupModel(obj) {
+  applyRigMaterial(obj);
+
   const box = new THREE.Box3().setFromObject(obj);
   const center = box.getCenter(new THREE.Vector3());
   const size   = box.getSize(new THREE.Vector3());
@@ -137,6 +206,8 @@ function setupModel(obj) {
 // ─── Scroll ────────────────────────────────────────────────────
 let scrollY = 0;
 window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+const overlayText = document.getElementById('overlay-text');
+const fadeDistance = 500;
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
@@ -147,6 +218,7 @@ function easeOut(t) {
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+
 // ─── Render Loop ───────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
@@ -155,6 +227,7 @@ function animate() {
   const raw = clamp01((scrollY - params.scrollStart) /
                       Math.max(1, params.scrollEnd - params.scrollStart));
   const t = easeOut(raw);
+  const introOpacity = clamp01(1 - (scrollY / fadeDistance));
 
   if (model) {
     // Rotate from π (back) → 0 (front), purely scroll-driven
@@ -170,6 +243,7 @@ function animate() {
   // Look toward the face: y=0 at start, y=faceY at end
   const lookY = lerp(0, params.faceY, t);
   camera.lookAt(0, lookY, 0);
+  overlayText.style.opacity = String(introOpacity);
 
   renderer.render(scene, camera);
 
