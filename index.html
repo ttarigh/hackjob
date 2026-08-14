@@ -32,8 +32,16 @@
       margin-bottom: 3rem;
     }
 
+    .episodes {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
     .episode-btn {
       display: inline-block;
+      min-width: 200px;
       padding: 0.85rem 2.25rem;
       border: 1px solid rgba(255, 255, 255, 0.6);
       background: transparent;
@@ -61,7 +69,10 @@
 <body>
   <main>
     <h1>Hack Job</h1>
-    <a class="episode-btn" href="episode1/index.html">Episode 1</a>
+    <div class="episodes">
+      <a class="episode-btn" href="episode1/index.html">Episode 1</a>
+      <a class="episode-btn" href="episode3/index.html">Episode 3</a>
+    </div>
   </main>
 </body>
 </html>

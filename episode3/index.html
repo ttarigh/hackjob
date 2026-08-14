@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+  <title>Dennis's Gut Check</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@1,400;1,700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #ede0d0;
+      color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 414px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 42px 24px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Wordmark Header with smooth subtle wiggle */
+    .wordmark-wrapper {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .wordmark-img {
+      width: 220px;
+      max-width: 65vw;
+      height: auto;
+      display: block;
+      user-select: none;
+      filter: url(#wiggle-filter);
+      will-change: filter;
+    }
+
+    /* Main Section */
+    .main-section {
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Subtle infrequent blinking timestamp: italics, monospace, light red */
+    .timestamp {
+      font-family: 'Space Mono', "SF Mono", Monaco, Menlo, "Roboto Mono", Consolas, monospace;
+      font-style: italic;
+      font-size: 14px;
+      font-weight: 400;
+      color: #e25858;
+      margin-bottom: 6px;
+      text-align: left;
+      animation: subtle-blink 9s ease-in-out infinite;
+      letter-spacing: -0.01em;
+    }
+
+    @keyframes subtle-blink {
+
+      0%,
+      84%,
+      100% {
+        opacity: 1;
+      }
+
+      88% {
+        opacity: 0.25;
+      }
+
+      91% {
+        opacity: 0.95;
+      }
+
+      94% {
+        opacity: 0.35;
+      }
+
+      97% {
+        opacity: 1;
+      }
+    }
+
+    /* Toilet Image Box */
+    .toilet-box {
+      width: 100%;
+      height: 380px;
+      background-color: #d9d9d9;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .toilet-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      transform: scale(1);
+      transform-origin: 50% 85%;
+      transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+
+    .container.active .toilet-img {
+      transform: scale(2.1);
+    }
+
+    /* Talk to Gut Action Button */
+    .action-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      z-index: 5;
+    }
+
+    .talk-gut-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #000000;
+      color: #ede0d0;
+      font-family: 'Space Mono', "SF Mono", Monaco, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      padding: 13px 26px;
+      border: none;
+      border-radius: 9999px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.2s ease,
+        opacity 0.4s ease,
+        box-shadow 0.3s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .talk-gut-btn:hover {
+      background-color: #222222;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    }
+
+    .talk-gut-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .container.active .talk-gut-btn {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(14px) scale(0.92);
+    }
+
+    /* Microphones pinned to the bottom of the page */
+    .microphones-img {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 105%);
+      width: 100%;
+      max-width: 390px;
+      pointer-events: none;
+      z-index: 10;
+      display: block;
+      transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+      cursor: pointer;
+    }
+
+    .container.active .microphones-img {
+      transform: translate(-50%, 0%);
+      pointer-events: auto;
+    }
+
+    /* Hidden SVG for filters */
+    .svg-filters {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Smooth Subtle Wiggle Filter (non-jittery) -->
+  <svg class="svg-filters" aria-hidden="true">
+    <defs>
+      <filter id="wiggle-filter" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence id="wiggle-turb" type="fractalNoise" baseFrequency="0.04 0.045" numOctaves="2" result="noise"
+          seed="4">
+          <animate attributeName="baseFrequency" values="0.040 0.045; 0.046 0.042; 0.043 0.048; 0.040 0.045" dur="3.5s"
+            repeatCount="indefinite" />
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <main class="container">
+    <header class="wordmark-wrapper">
+      <img src="wordmark.svg" alt="Dennis's Gut Check" class="wordmark-img" />
+    </header>
+
+    <section class="main-section">
+      <div class="timestamp">time of last shit: <span id="shit-time">9:26am</span></div>
+
+      <div class="toilet-box">
+        <img src="toiletwithpoop.png" alt="Toilet" class="toilet-img" id="toilet-photo" />
+      </div>
+
+      <div class="action-wrapper">
+        <button class="talk-gut-btn" id="talk-btn" type="button">
+          talk to your gut
+        </button>
+      </div>
+    </section>
+
+    <!-- Microphones fixed to the bottom of the viewport/container -->
+    <img src="microphone.png" alt="Microphones" class="microphones-img" id="microphones" />
+  </main>
+
+  <script>
+    // Talk to gut button interaction
+    const container = document.querySelector('.container');
+    const talkBtn = document.getElementById('talk-btn');
+    const microphonesImg = document.getElementById('microphones');
+
+    if (talkBtn) {
+      talkBtn.addEventListener('click', () => {
+        container.classList.add('active');
+      });
+    }
+
+    if (microphonesImg) {
+      microphonesImg.addEventListener('click', () => {
+        container.classList.toggle('active');
+      });
+    }
+
+    // Smooth continuous frequency interpolation for gentle stroke breathing/wiggling
+    const turb = document.getElementById('wiggle-turb');
+    if (turb) {
+      let t = 0;
+      function smoothWiggle() {
+        t += 0.025;
+        const fx = 0.042 + Math.sin(t * 0.9) * 0.004;
+        const fy = 0.045 + Math.cos(t * 1.1) * 0.004;
+        turb.setAttribute('baseFrequency', `${fx.toFixed(5)} ${fy.toFixed(5)}`);
+        requestAnimationFrame(smoothWiggle);
+      }
+      requestAnimationFrame(smoothWiggle);
+    }
+
+    // Pseudo-random generator seeded by date and half-day slot
+    function getSeededRandom(seed) {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function updateShitTime() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const day = now.getDate();
+      const hours = now.getHours();
+
+      // 2 slots per day:
+      // Slot 0: 12:00am - 11:59am (Morning time, e.g. 6:xx am to 10:xx am)
+      // Slot 1: 12:00pm - 11:59pm (Afternoon/Evening time, e.g. 1:xx pm to 6:xx pm)
+      const slot = hours < 12 ? 0 : 1;
+      const seed = (year * 372) + (month * 31) + day + (slot * 1013) + 7;
+
+      const randHour = getSeededRandom(seed);
+      const randMin = getSeededRandom(seed + 42);
+
+      let hour, minute, ampm;
+      if (slot === 0) {
+        hour = 6 + Math.floor(randHour * 5); // 6, 7, 8, 9, 10
+        minute = Math.floor(randMin * 60);
+        ampm = 'am';
+      } else {
+        hour = 1 + Math.floor(randHour * 6); // 1, 2, 3, 4, 5, 6
+        minute = Math.floor(randMin * 60);
+        ampm = 'pm';
+      }
+
+      const formattedMin = minute < 10 ? '0' + minute : minute;
+      const timeStr = `${hour}:${formattedMin}${ampm}`;
+
+      const el = document.getElementById('shit-time');
+      if (el) {
+        el.textContent = timeStr;
+      }
+    }
+
+    updateShitTime();
+    // Check every minute to update when the time slot changes
+    setInterval(updateShitTime, 60000);
+  </script>
+</body>
+
+</html>
