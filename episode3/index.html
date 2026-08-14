@@ -134,126 +134,30 @@
       transform: scale(2.1);
     }
 
-    /* Dialogue Card Overlay on Toilet View */
-    .dialogue-card {
-      position: absolute;
-      top: 14px;
-      left: 12px;
-      right: 12px;
-      background: rgba(237, 224, 208, 0.95);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 2px solid #000000;
-      padding: 12px 14px;
-      z-index: 8;
-      opacity: 0;
-      transform: translateY(-12px);
-      transition: opacity 0.35s ease, transform 0.35s ease;
-      pointer-events: none;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .container.active .dialogue-card {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-
-    .dialogue-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .pulse-dot {
-      width: 9px;
-      height: 9px;
-      background-color: #e25858;
-      border-radius: 50%;
-      display: inline-block;
-      animation: pulse-glow 1.2s ease-in-out infinite;
-    }
-
-    @keyframes pulse-glow {
-      0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.35;
-        transform: scale(0.85);
-      }
-    }
-
-    .status-label {
-      font-family: 'Space Mono', monospace;
-      font-style: italic;
-      font-size: 12px;
-      color: #e25858;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .dialogue-body {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .user-transcript {
-      font-family: 'Space Mono', monospace;
-      font-style: italic;
-      font-size: 13px;
-      color: #555555;
-      line-height: 1.35;
-      word-break: break-word;
-      min-height: 20px;
-    }
-
-    .gut-response {
-      font-family: 'Space Mono', monospace;
-      font-size: 13.5px;
-      font-weight: 700;
-      color: #000000;
-      line-height: 1.35;
-      word-break: break-word;
-      display: none;
-    }
-
-    .gut-response.visible {
-      display: block;
-    }
-
-    .dialogue-footer {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      color: #777777;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-top: 2px;
-    }
-
-    /* Speaking wobbles */
+    /* Speaking wobbles for toilet photo and mic */
     @keyframes gut-talk-wobble {
-      0%, 100% {
+      0% {
         transform: scale(2.1) rotate(0deg);
       }
-      25% {
-        transform: scale(2.13) rotate(-1.5deg) translateY(-2px);
+      20% {
+        transform: scale(2.14) rotate(-2.5deg) translateY(-2px);
       }
-      50% {
-        transform: scale(2.08) rotate(1deg) translateY(1px);
+      40% {
+        transform: scale(2.07) rotate(2deg) translateY(2px);
       }
-      75% {
-        transform: scale(2.14) rotate(-1deg) translateY(-1px);
+      60% {
+        transform: scale(2.15) rotate(-1.5deg) translateY(-1px);
+      }
+      80% {
+        transform: scale(2.08) rotate(2.5deg) translateY(1px);
+      }
+      100% {
+        transform: scale(2.1) rotate(0deg);
       }
     }
 
     .container.active.gut-speaking .toilet-img {
-      animation: gut-talk-wobble 0.2s ease-in-out infinite;
+      animation: gut-talk-wobble 0.22s ease-in-out infinite !important;
     }
 
     @keyframes mic-vibrate {
@@ -261,12 +165,12 @@
         transform: translate(-50%, 0);
       }
       50% {
-        transform: translate(-50%, -3px);
+        transform: translate(-50%, -4px);
       }
     }
 
     .container.active.gut-speaking .microphones-img {
-      animation: mic-vibrate 0.25s ease-in-out infinite;
+      animation: mic-vibrate 0.25s ease-in-out infinite !important;
     }
 
     /* Talk to Gut Action Button */
@@ -376,21 +280,6 @@
 
       <div class="toilet-box">
         <img src="toiletwithpoop.png" alt="Toilet" class="toilet-img" id="toilet-photo" />
-
-        <!-- Speech Transcription & Poop Advice Dialogue Card -->
-        <div class="dialogue-card" id="dialogue-card">
-          <div class="dialogue-header">
-            <span class="pulse-dot" id="pulse-dot"></span>
-            <span class="status-label" id="status-label">listening to your gut...</span>
-          </div>
-          <div class="dialogue-body">
-            <div class="user-transcript" id="user-transcript">"Listening... ask your question"</div>
-            <div class="gut-response" id="gut-response"></div>
-          </div>
-          <div class="dialogue-footer" id="dialogue-footer">
-            speak clearly • tap mic anytime to talk again
-          </div>
-        </div>
       </div>
 
       <div class="action-wrapper">
@@ -461,60 +350,59 @@
     updateShitTime();
     setInterval(updateShitTime, 60000);
 
-    // ==========================================
-    // SPEECH RECOGNITION & POOP ADVICE TTS LOGIC
-    // ==========================================
+    // ==========================================================
+    // SIMPLE, HILARIOUS & OBVIOUSLY TERRIBLE ADVICE DATABASE
+    // ==========================================================
 
-    const container = document.querySelector('.container');
-    const talkBtn = document.getElementById('talk-btn');
-    const microphonesImg = document.getElementById('microphones');
-    const statusLabel = document.getElementById('status-label');
-    const userTranscriptEl = document.getElementById('user-transcript');
-    const gutResponseEl = document.getElementById('gut-response');
-    const pulseDot = document.getElementById('pulse-dot');
-
-    const adviceDatabase = {
-      crypto: [
-        "Put your life savings into Squid Token. The fundamentals are purely emotional.",
-        "Sell your organs for Solana memecoins named after deceased pets.",
-        "Bitcoin is going to zero. Move everything into Beanie Babies.",
-        "Mortgage your mother's house and buy 400 ape NFTs immediately.",
-        "Dogecoin is the only currency backed by actual barks. Buy all of it."
+    const horribleAdviceDatabase = {
+      money: [
+        "If you run out of money, just print more on your home printer.",
+        "Borrow ten million dollars from your grandma and tell her it is a high-yield savings account.",
+        "Put your company's entire bank account into scratch-off lottery tickets.",
+        "Charge one million dollars per item and only find one customer.",
+        "Ask for a billion dollars in cash stuffed into a grocery bag.",
+        "Tell everyone you do not believe in money and demand thirty cows instead.",
+        "Leave your wallet in a public park and hope it attracts new business."
       ],
-      stocks: [
-        "Short NVIDIA with 100x leverage. AI is just three raccoons in a server rack.",
-        "Put your entire portfolio into Spirit Airlines. They have nowhere to go but up.",
-        "Sell all your tech stocks. Put it all into canned tuna and AAA batteries.",
-        "Day trade penny stocks while driving. It improves your reaction time.",
-        "Always buy at the absolute peak. It builds character."
+      people: [
+        "Fire your whole team and do all the work yourself in Microsoft Paint.",
+        "Pay your employees in half-eaten pizza crusts and motivational handshakes.",
+        "Only hire people who have the exact same first name as you.",
+        "If an employee asks for a raise, challenge them to an arm wrestling match.",
+        "Scream at your business partner in a restaurant to show everyone who is the boss.",
+        "Replace your manager with a plastic skeleton wearing sunglasses.",
+        "Make all important decisions by playing rock paper scissors in the mirror."
       ],
-      realEstate: [
-        "Do not buy a house. Buy thirty used Honda Civics and rent them out as micro-apartments.",
-        "Real estate is a trap. Invest in underground bunkers made of cardboard.",
-        "Stop paying rent and tell your landlord you identify as an asset class.",
-        "Buy swampland in Florida. When sea levels rise, you will own prime coral reef."
+      product: [
+        "Make all your products out of expired cheese to cut costs.",
+        "Scream at your computer until the bugs fix themselves.",
+        "Replace your whole app with a twenty-minute video of a dancing hamster.",
+        "Never test your product. If it catches on fire, that builds character.",
+        "Add forty pop-up ads that play loud car horn sounds every three seconds.",
+        "Build a product that does absolutely nothing, but make it very loud and colorful."
       ],
-      retirement: [
-        "Liquidate your 401k and put it all on black at the nearest casino.",
-        "Retirement is for cowards. Spend every dollar you have today on scratch-off tickets.",
-        "Emergency fund? Just drink tap water and eat dandelion leaves from the park.",
-        "Max out your credit cards now. If you outlive the debt, you win."
+      customers: [
+        "If a customer complains, block their phone number and change your identity.",
+        "Spend your entire marketing budget on a giant billboard of your own face.",
+        "Tell angry customers that your company is a hallucination and hang up immediately.",
+        "Call customers at three in the morning to ask if they are thinking about your product.",
+        "Require customers to send you a handwritten apology letter before they can buy anything.",
+        "Promise customers your product gives them laser vision. Deal with the lawsuits later."
       ],
-      commodities: [
-        "Gold is fake. Melt down all your copper pennies and hide them in your mattress.",
-        "Oil is yesterday's news. I am investing heavily in stolen catalytic converters.",
-        "Stockpile expired butter. In the apocalypse, you will be the butter king."
+      runway: [
+        "When you run out of money, just tell everyone you are doing a secret billionaire experiment.",
+        "Slash expenses by moving the entire company into a single rented inflatable bouncy castle.",
+        "Pivot your entire business into selling counterfeit chocolate bars at high school soccer games.",
+        "Pretend you were bought out by the government and refuse to answer questions."
       ],
       general: [
-        "Liquidate everything and buy ten thousand Chuck E. Cheese tokens. It is the next global reserve currency.",
-        "Take out a personal loan and invest in counterfeit Pokémon cards.",
-        "Never diversify. Put 100% of your net worth into a single unvetted Kickstarter.",
-        "Bury your money in a jar behind an Arby's. Safest yield on the market.",
-        "Borrow money from loan sharks to buy zero-day out-of-the-money call options.",
-        "Max out five credit cards to buy wholesale vapes. Guaranteed 800% profit margin.",
-        "Do not invest. Convert your entire paycheck into Dave and Buster's Power Cards.",
-        "Sell high, buy higher. That is the Dennis Gut philosophy.",
-        "Put everything into physical VHS tapes of Shrek 2. The bubble has not even started."
+        "Fake your own death and re-brand as an Italian luxury fashion house.",
+        "Stop sleeping forever. Sleep is for people who do not want to be rich.",
+        "Wear a fake mustache to every meeting and pretend to be your own evil twin brother.",
+        "Whenever someone asks you a hard question, hiss at them and crawl under the desk.",
+        "Quit what you are doing and start a competitive underground worm racing league.",
+        "Drink nineteen energy drinks, yell at a bird in the parking lot, and make no changes.",
+        "Ship complete garbage today. Move to an uninhabited island tomorrow."
       ]
     };
 
@@ -523,187 +411,198 @@
     }
 
     function getHorribleAdvice(question) {
-      const q = question.toLowerCase();
-      if (q.includes('crypto') || q.includes('bitcoin') || q.includes('btc') || q.includes('eth') || q.includes('solana') || q.includes('doge') || q.includes('coin') || q.includes('nft') || q.includes('token')) {
-        return pickRandom(adviceDatabase.crypto);
+      const q = (question || '').toLowerCase();
+
+      // Money / Cash / Funding / Investors / Pricing / Cost
+      if (q.includes('money') || q.includes('cash') || q.includes('price') || q.includes('cost') || q.includes('pay') || q.includes('invest') || q.includes('raise') || q.includes('fund') || q.includes('bank') || q.includes('rich') || q.includes('broke') || q.includes('expensive') || q.includes('cheap') || q.includes('salary')) {
+        return pickRandom(horribleAdviceDatabase.money);
       }
-      if (q.includes('stock') || q.includes('nvidia') || q.includes('nvda') || q.includes('apple') || q.includes('tesla') || q.includes('tech') || q.includes('market') || q.includes('s&p') || q.includes('spy') || q.includes('share')) {
-        return pickRandom(adviceDatabase.stocks);
+
+      // People / Team / Hire / Fire / Boss / Cofounder / Partner / Employee
+      if (q.includes('hire') || q.includes('fire') || q.includes('team') || q.includes('people') || q.includes('boss') || q.includes('partner') || q.includes('cofounder') || q.includes('coworker') || q.includes('employee') || q.includes('manager') || q.includes('friend') || q.includes('intern')) {
+        return pickRandom(horribleAdviceDatabase.people);
       }
-      if (q.includes('house') || q.includes('home') || q.includes('real estate') || q.includes('property') || q.includes('mortgage') || q.includes('rent') || q.includes('landlord')) {
-        return pickRandom(adviceDatabase.realEstate);
+
+      // Product / Code / App / Website / Build / Bug / Feature / Idea
+      if (q.includes('product') || q.includes('app') || q.includes('site') || q.includes('website') || q.includes('code') || q.includes('build') || q.includes('bug') || q.includes('fix') || q.includes('feature') || q.includes('tech') || q.includes('idea') || q.includes('make')) {
+        return pickRandom(horribleAdviceDatabase.product);
       }
-      if (q.includes('retire') || q.includes('401k') || q.includes('ira') || q.includes('saving') || q.includes('save') || q.includes('pension') || q.includes('emergency fund') || q.includes('budget')) {
-        return pickRandom(adviceDatabase.retirement);
+
+      // Customers / Marketing / Sales / Users / Complain / Ads / Growth
+      if (q.includes('customer') || q.includes('user') || q.includes('client') || q.includes('complain') || q.includes('market') || q.includes('sale') || q.includes('ad') || q.includes('growth') || q.includes('review') || q.includes('feedback')) {
+        return pickRandom(horribleAdviceDatabase.customers);
       }
-      if (q.includes('gold') || q.includes('silver') || q.includes('oil') || q.includes('commodity') || q.includes('copper') || q.includes('metal')) {
-        return pickRandom(adviceDatabase.commodities);
+
+      // Failing / Pivot / Out of money / Broke / Quit / Save
+      if (q.includes('fail') || q.includes('pivot') || q.includes('lose') || q.includes('dead') || q.includes('broke') || q.includes('quit') || q.includes('save') || q.includes('survive')) {
+        return pickRandom(horribleAdviceDatabase.runway);
       }
-      return pickRandom(adviceDatabase.general);
+
+      return pickRandom(horribleAdviceDatabase.general);
     }
 
-    let recognition = null;
-    let isListening = false;
-    let silenceTimer = null;
-    let lastSpokenText = '';
+    // ==========================================================
+    // ROBUST SPEECH SYNTHESIS & RECOGNITION CONTROLLER
+    // ==========================================================
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const container = document.querySelector('.container');
+    const talkBtn = document.getElementById('talk-btn');
+    const microphonesImg = document.getElementById('microphones');
 
-    function speakPoopAdvice(text) {
-      if (!window.speechSynthesis) return;
+    // Keep global reference to avoid Chromium GC bug
+    window._currentUtterance = null;
+    let activeRecognition = null;
+    let fallbackWobbleTimer = null;
 
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.02;
-      utterance.pitch = 0.7; // Lower pitched, comical gut voice
-
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Fred') || v.name.includes('Daniel') || v.name.includes('Alex') || v.name.includes('Google US English'))) || voices.find(v => v.lang.startsWith('en'));
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+    // Periodic unpause keep-alive for Chrome TTS engine
+    setInterval(() => {
+      if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
       }
+    }, 4000);
 
-      utterance.onstart = () => {
-        container.classList.add('gut-speaking');
-        statusLabel.textContent = '💩 gut is speaking...';
-        pulseDot.style.backgroundColor = '#000000';
-      };
-
-      utterance.onend = () => {
+    function triggerWobble(durationMs) {
+      if (fallbackWobbleTimer) clearTimeout(fallbackWobbleTimer);
+      container.classList.add('gut-speaking');
+      fallbackWobbleTimer = setTimeout(() => {
         container.classList.remove('gut-speaking');
-        statusLabel.textContent = '💩 gut spoke • tap mic to ask again';
-        pulseDot.style.backgroundColor = '#e25858';
-      };
-
-      utterance.onerror = () => {
-        container.classList.remove('gut-speaking');
-        statusLabel.textContent = '💩 tap mic to ask again';
-      };
-
-      window.speechSynthesis.speak(utterance);
+      }, durationMs);
     }
 
-    function processQuestion(question) {
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
-
-      if (recognition && isListening) {
-        try {
-          recognition.stop();
-        } catch (e) { }
-        isListening = false;
-      }
-
-      const cleanQuestion = question && question.trim() ? question.trim() : "What should I invest in?";
-      userTranscriptEl.textContent = `"${cleanQuestion}"`;
-
-      statusLabel.textContent = '💩 gut thinking...';
-      const advice = getHorribleAdvice(cleanQuestion);
-
-      setTimeout(() => {
-        gutResponseEl.textContent = `"${advice}"`;
-        gutResponseEl.classList.add('visible');
-        speakPoopAdvice(advice);
-      }, 400);
-    }
-
-    function initSpeechRecognition() {
-      if (!SpeechRecognition) {
-        userTranscriptEl.textContent = '"Speech recognition not supported in this browser. Tap mic for gut advice."';
+    function playPoopVoice(text) {
+      if (!('speechSynthesis' in window)) {
+        triggerWobble(3000);
         return;
       }
 
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      // Reset and resume speech engine
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
 
-      recognition.onstart = () => {
-        isListening = true;
-        lastSpokenText = '';
-        statusLabel.textContent = 'listening to your gut...';
-        pulseDot.style.backgroundColor = '#e25858';
-        userTranscriptEl.textContent = '"Listening... speak now"';
-        gutResponseEl.classList.remove('visible');
-      };
+      // Estimated speech duration for visual sync fallback
+      const approxDurationMs = Math.max(2500, (text.split(' ').length / 2.5) * 1000 + 1000);
+      triggerWobble(approxDurationMs);
 
-      recognition.onresult = (event) => {
-        let interimText = '';
-        let finalText = '';
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.resume();
+        } catch (e) { }
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalText += event.results[i][0].transcript;
-          } else {
-            interimText += event.results[i][0].transcript;
-          }
+        const utterance = new SpeechSynthesisUtterance(text);
+        window._currentUtterance = utterance;
+
+        utterance.lang = 'en-US';
+        utterance.rate = 1.02;
+        utterance.pitch = 0.7; // Deep/gritty poop pitch
+
+        const voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+          const v = voices.find(voice => voice.lang.startsWith('en') && (voice.name.includes('Fred') || voice.name.includes('Daniel') || voice.name.includes('Alex') || voice.name.includes('Google US English') || voice.name.includes('Samantha'))) || voices.find(voice => voice.lang.startsWith('en'));
+          if (v) utterance.voice = v;
         }
 
-        const currentText = (finalText || interimText).trim();
-        if (currentText) {
-          lastSpokenText = currentText;
-          userTranscriptEl.textContent = `"${currentText}"`;
+        utterance.onstart = () => {
+          container.classList.add('gut-speaking');
+        };
 
-          // Reset silence debounce
-          if (silenceTimer) clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => {
-            if (lastSpokenText) {
-              processQuestion(lastSpokenText);
-            }
-          }, 1400);
-        }
-      };
+        const stopSpeaking = () => {
+          container.classList.remove('gut-speaking');
+          if (fallbackWobbleTimer) clearTimeout(fallbackWobbleTimer);
+          window._currentUtterance = null;
+        };
 
-      recognition.onerror = (event) => {
-        console.warn('Speech recognition status:', event.error);
-        if (event.error === 'not-allowed') {
-          userTranscriptEl.textContent = '"Microphone access denied. Tap mic to get random advice."';
-        } else if (event.error === 'no-speech' && !lastSpokenText) {
-          userTranscriptEl.textContent = '"Nothing heard... tap mic and ask again!"';
-        }
-      };
+        utterance.onend = stopSpeaking;
+        utterance.onerror = (err) => {
+          console.warn('TTS error:', err);
+          stopSpeaking();
+        };
 
-      recognition.onend = () => {
-        isListening = false;
-        if (lastSpokenText && !gutResponseEl.classList.contains('visible')) {
-          processQuestion(lastSpokenText);
-        }
-      };
+        window.speechSynthesis.speak(utterance);
+      }, 40);
     }
 
     function startListening() {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      // Unblock and prime audio
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.resume();
+        } catch (e) { }
       }
       container.classList.remove('gut-speaking');
 
-      if (!recognition) {
-        initSpeechRecognition();
+      // Abort any lingering recognition session
+      if (activeRecognition) {
+        try { activeRecognition.abort(); } catch (e) { }
+        activeRecognition = null;
       }
 
-      if (recognition) {
-        try {
-          recognition.start();
-        } catch (e) {
-          // If already started, stop and restart
-          try {
-            recognition.stop();
-            setTimeout(() => {
-              try { recognition.start(); } catch (err) { }
-            }, 200);
-          } catch (err) { }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        // Fallback for browsers with no speech recognition
+        setTimeout(() => {
+          const advice = getHorribleAdvice("money");
+          playPoopVoice(advice);
+        }, 600);
+        return;
+      }
+
+      // Always instantiate a fresh SpeechRecognition to prevent Chrome "already started" or frozen state
+      const rec = new SpeechRecognition();
+      activeRecognition = rec;
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+
+      let capturedText = '';
+      let hasDeliveredAnswer = false;
+
+      function finalizeAnswer() {
+        if (hasDeliveredAnswer) return;
+        hasDeliveredAnswer = true;
+
+        if (activeRecognition) {
+          try { activeRecognition.abort(); } catch (e) { }
+          activeRecognition = null;
         }
-      } else {
-        // Fallback
-        processQuestion("What should I invest in?");
+
+        const question = capturedText.trim() || "What should I do?";
+        const advice = getHorribleAdvice(question);
+        
+        // Wait 120ms for microphone hardware stream release before playing TTS
+        setTimeout(() => {
+          playPoopVoice(advice);
+        }, 120);
+      }
+
+      rec.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          capturedText = event.results[i][0].transcript;
+        }
+      };
+
+      rec.onend = () => {
+        finalizeAnswer();
+      };
+
+      rec.onerror = (event) => {
+        console.warn('SpeechRecognition status:', event.error);
+        if (event.error !== 'no-speech') {
+          finalizeAnswer();
+        }
+      };
+
+      try {
+        rec.start();
+      } catch (err) {
+        console.warn('Recognition start failed:', err);
+        finalizeAnswer();
       }
     }
 
-    // Warm up voices
-    if (window.speechSynthesis) {
+    // Warm up voice list
+    if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
       };
